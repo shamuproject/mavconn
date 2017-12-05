@@ -1,0 +1,4 @@
+
+# This is an example function, remove it.
+def capital_case(x):
+    return x.capitalize()
