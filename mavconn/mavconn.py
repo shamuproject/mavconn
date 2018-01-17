@@ -10,11 +10,17 @@ class MAVLinkConnection:
         self._stacks = defaultdict(list)
 
     def push_handler(self, message_name, handler):
-        self._stacks[message_name].append(handler)
+    	try:
+        	self._stacks[message_name].append(handler)
 
     def pop_handler(self, message_name):
         """return function(mav,message)"""
-       	handler = self._stacks[message_name].pop()
+        try:
+       		handler = self._stacks[message_name].pop()
+		except KeyError:
+			raise KeyError('That message name key does not exist yet!')
+		except IndexError:
+			raise IndexError('No handlers for that message name exist!')
 
     def clear_handler(self, message_name):
         self._stacks.pop('message_name', None)
