@@ -8,16 +8,16 @@ class MAVLinkConnection:
     def __init__(self, mavfile):
         self.mav = mavfile
         self._stacks = defaultdict(list)
-	
-    def push_handler(self, message, handler):
-        pass
 
-    def pop_handler(self, message):
+    def push_handler(self, message_name, handler):
+        self._stacks[message_name].append(handler)
+
+    def pop_handler(self, message_name):
         """return function(mav,message)"""
-        pass
+       	handler = self._stacks[message_name].pop()
 
-    def clear_handler(message):
-        pass
+    def clear_handler(self, message_name):
+        self._stacks.pop('message_name', None)
 
     def add_timer(period, handler):
         pass
