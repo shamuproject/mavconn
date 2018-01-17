@@ -16,7 +16,7 @@ URL = 'https://github.com/shamuproject/mavconn'
 AUTHOR = 'Severyn Polakiewicz'
 
 # What packages are required for this module to be executed?
-REQUIRED = []
+REQUIRED = ['pymavlink','future']
 
 here = os.path.abspath(os.path.dirname(__file__))
 
