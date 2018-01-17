@@ -10,8 +10,7 @@ class MAVLinkConnection:
         self._stacks = defaultdict(list)
 
     def push_handler(self, message_name, handler):
-    	try:
-        	self._stacks[message_name].append(handler)
+        self._stacks[message_name].append(handler)
 
     def pop_handler(self, message_name):
         """return function(mav,message)"""
