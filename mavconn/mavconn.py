@@ -1,4 +1,5 @@
 from pymavlink.mavutil import mavudp
+from collections import defaultdict
 
 
 class MAVLinkConnection:
@@ -6,6 +7,7 @@ class MAVLinkConnection:
 
     def __init__(self, mavfile):
         self.mav = mavfile
+        self._stacks = defaultdict(list)
 	
     def push_handler(self, message, handler):
         pass
