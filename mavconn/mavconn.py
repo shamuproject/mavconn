@@ -17,13 +17,14 @@ class MAVLinkConnection:
         try:
        	    handler = self._stacks[message_name].pop()
        	    return handler
-        except KeyError:
-            raise KeyError('That message name key does not exist yet!')
-        except IndexError:
-            raise IndexError('No handlers for that message name exist!')
+        except (KeyError, IndexError):
+            raise KeyError('That message name key does not exist!')
 
-    def clear_handler(self, message_name):
-        self._stacks.pop('message_name', None)
+    def clear_handler(self, message_name=None):
+        if message_name:
+            self._stacks.pop(message_name)
+        else:
+            self._stacks.clear()
 
     def add_timer(period, handler):
         pass
