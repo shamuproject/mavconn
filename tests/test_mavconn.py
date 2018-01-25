@@ -20,7 +20,7 @@ def test_initialization():
     with pytest.raises(KeyError, message="That message name key does not exist!"):
         test_mav.pop_handler('TELEMETRY')
 
-    test_mav.clear_handler('HEARTBEAT')
     test_mav.clear_handler('TELEMETRY')
+    test_mav.clear_handler()
     assert test_mav._stacks == test_clear  
     
