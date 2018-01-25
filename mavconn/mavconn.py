@@ -16,6 +16,7 @@ class MAVLinkConnection:
         """return function(mav,message)"""
         try:
        	    handler = self._stacks[message_name].pop()
+       	    return handler
         except KeyError:
             raise KeyError('That message name key does not exist yet!')
         except IndexError:
