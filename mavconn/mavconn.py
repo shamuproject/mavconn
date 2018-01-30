@@ -1,5 +1,6 @@
 from pymavlink.mavutil import mavudp
 from collections import defaultdict
+import datetime
 
 
 class MAVLinkConnection:
@@ -32,8 +33,10 @@ class MAVLinkConnection:
 class Timer:
     """Definition of Timer class"""
 
-    def __init__(self, period, handler, _next_time):
+    def __init__(self, period, handler):
         self.period = period
         self.handler = handler
-        self._next_time = 
+        current_time = datetime.datetime.now()
+        period_seconds = timedelta(seconds=self.period)
+        self._next_time = current_time + period_seconds
         
