@@ -28,3 +28,12 @@ class MAVLinkConnection:
 
     def add_timer(period, handler):
         pass
+
+class Timer:
+    """Definition of Timer class"""
+
+    def __init__(self, period, handler, _next_time):
+        self.period = period
+        self.handler = handler
+        self._next_time = 
+        
