@@ -10,7 +10,6 @@ class MAVLinkConnection:
     def __init__(self, mavfile):
         self.mav = mavfile
         self._stacks = defaultdict(list)
-        self._timers = []
 
     def push_handler(self, message_name, handler):
         self._stacks[message_name].append(handler)
@@ -45,10 +44,10 @@ class Timer:
     def __eq__(self, other):
         if self is other:
             return True
-        elif type(self) != type(other)
+        elif type(self) != type(other):
             return False
         else:
-            return self.name == other.name
+            return self._next_time == other._next_time
 
     def __lt__(self, other):
         return self._next_time < other._next_time
