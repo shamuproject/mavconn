@@ -1,6 +1,7 @@
 from pymavlink.mavutil import mavudp
 from collections import defaultdict
 import datetime
+from datetime import timedelta
 
 
 class MAVLinkConnection:
