@@ -1,6 +1,7 @@
 import pytest
 
 from mavconn.mavconn import MAVLinkConnection
+from mavconn.mavconn import Timer
 
 mavfile = 1.0
 test_stack = {'HEARTBEAT':['handler1','handler2'],'TELEMETRY':['handler3']}
@@ -19,8 +20,7 @@ def test_initialization():
     assert handler_test == 'handler3'
     with pytest.raises(KeyError, message="That message name key does not exist!"):
         test_mav.pop_handler('TELEMETRY')
-
     test_mav.clear_handler('TELEMETRY')
     test_mav.clear_handler()
-    assert test_mav._stacks == test_clear  
+    assert test_mav._stacks == test_clear
     

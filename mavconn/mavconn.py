@@ -2,6 +2,7 @@ from pymavlink.mavutil import mavudp
 from collections import defaultdict
 import datetime
 from datetime import timedelta
+from heapq import heappush, heappop
 
 
 class MAVLinkConnection:
@@ -10,6 +11,7 @@ class MAVLinkConnection:
     def __init__(self, mavfile):
         self.mav = mavfile
         self._stacks = defaultdict(list)
+        self._timers = []
 
     def push_handler(self, message_name, handler):
         self._stacks[message_name].append(handler)
@@ -29,7 +31,7 @@ class MAVLinkConnection:
             self._stacks.clear()
 
     def add_timer(self, period, handler):
-        pass
+        heappush(self._timers, Timer(period, handler))
 
 class Timer:
     """Definition of Timer class"""
