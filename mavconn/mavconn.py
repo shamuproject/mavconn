@@ -10,6 +10,7 @@ class MAVLinkConnection:
     def __init__(self, mavfile):
         self.mav = mavfile
         self._stacks = defaultdict(list)
+        self._timers = []
 
     def push_handler(self, message_name, handler):
         self._stacks[message_name].append(handler)
@@ -28,7 +29,7 @@ class MAVLinkConnection:
         else:
             self._stacks.clear()
 
-    def add_timer(period, handler):
+    def add_timer(self, period, handler):
         pass
 
 class Timer:
@@ -40,4 +41,28 @@ class Timer:
         current_time = datetime.datetime.now()
         period_seconds = timedelta(seconds=self.period)
         self._next_time = current_time + period_seconds
-        
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        elif type(self) != type(other)
+            return False
+        else:
+            return self.name == other.name
+
+    def __lt__(self, other):
+        return self._next_time < other._next_time
+
+    def __le__(self, other):
+        return self._next_time <= other._next_time
+
+    def __ge__(self, other):
+        return self._next_time >= other._next_time
+
+    def __gt__(self, other):
+        return self._next_time > other._next_time
+
+    def __ne__(self, other):
+        return self._next_time != other._next_time
+
+
