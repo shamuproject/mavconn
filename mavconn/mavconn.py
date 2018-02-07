@@ -3,6 +3,7 @@ from collections import defaultdict
 import datetime
 from datetime import timedelta
 from heapq import heappush, heappop
+import time
 
 
 class MAVLinkConnection:
@@ -32,6 +33,14 @@ class MAVLinkConnection:
 
     def add_timer(self, period, handler):
         heappush(self._timers, Timer(period, handler))
+
+    def timer_work(self):
+        current_timer = heappop(self._timers)
+        time_now = datetime.datetime.now()
+        delta_time = (current_timer._next_time - time_now).total_seconds()
+        time.sleep(delta_time)
+        # pass handler to worker thread
+        add_timer(current_timer.period, current_timer.handler)
 
 class Timer:
     """Definition of Timer class"""
