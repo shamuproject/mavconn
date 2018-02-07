@@ -36,20 +36,29 @@ class MAVLinkConnection:
 
     def timer_work(self):
         current_timer = heappop(self._timers)
-        time_now = datetime.datetime.now()
-        delta_time = (current_timer._next_time - time_now).total_seconds()
-        time.sleep(delta_time)
-        # pass handler to worker thread
-        add_timer(current_timer.period, current_timer.handler)
+        current_timer.wait_time()
+        current_timer.handle()
+        heappush(self._timers, current_timer)
 
 class Timer:
     """Definition of Timer class"""
 
     def __init__(self, period, handler):
-        self.period = period
-        self.handler = handler
+        self._period = period
+        self._handler = handler
         current_time = datetime.datetime.now()
-        period_seconds = timedelta(seconds=self.period)
+        period_seconds = timedelta(seconds=self._period)
+        self._next_time = current_time + period_seconds
+
+    def wait_time(self):
+        current_time = datetime.datetime.now()
+        delta_time = (self._next_time - current_time).total_seconds()
+        time.sleep(delta_time)
+
+    def handle(self):
+        # pass handler to worker thread
+        current_time = datetime.datetime.now()
+        period_seconds = timedelta(seconds=self._period)
         self._next_time = current_time + period_seconds
 
     def __eq__(self, other):

@@ -18,8 +18,8 @@ def test_timer_init():
     test_timer = Timer(period,handler)
     test_timer2 = Timer(period2,handler)
     test_timer3 = Timer(period,handler)
-    assert test_timer.period == 1
-    assert test_timer.handler == 5.0
+    assert test_timer._period == 1
+    assert test_timer._handler == 5.0
     assert test_timer._next_time == time
     assert test_timer2 > test_timer
     assert test_timer2 >= test_timer
