@@ -4,6 +4,8 @@ import datetime
 from datetime import timedelta
 from heapq import heappush, heappop
 import time
+import concurrent.futures
+import threading
 
 
 class MAVLinkConnection:
@@ -13,6 +15,17 @@ class MAVLinkConnection:
         self.mav = mavfile
         self._stacks = defaultdict(list)
         self._timers = []
+
+    def __enter__:
+        condition = threading.Condition()
+        executor = ThreadPoolExecutor(max_workers=3) #change this later
+        timer_thread = executor.submit(timer_work, condition)
+        return self
+
+    def __exit__:
+        # close all threads
+        # what goes here?
+        pass
 
     def push_handler(self, message_name, handler):
         self._stacks[message_name].append(handler)
@@ -34,11 +47,13 @@ class MAVLinkConnection:
     def add_timer(self, period, handler):
         heappush(self._timers, Timer(period, handler))
 
-    def timer_work(self):
-        current_timer = heappop(self._timers)
-        current_timer.wait_time()
-        current_timer.handle()
-        heappush(self._timers, current_timer)
+    def timer_work(self, cv):
+        with cv:
+            cv.wait_for(self._timers != [])
+            current_timer = heappop(self._timers)
+            current_timer.wait_time()
+            current_timer.handle()
+            heappush(self._timers, current_timer)
 
 class Timer:
     """Definition of Timer class"""
