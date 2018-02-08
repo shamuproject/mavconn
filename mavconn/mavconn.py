@@ -15,17 +15,24 @@ class MAVLinkConnection:
         self.mav = mavfile
         self._stacks = defaultdict(list)
         self._timers = []
+        self._timers_cv = threading.Condition()
+        self._continue = True
+        self._continue_lock = threading.Lock()
 
-    def __enter__:
-        condition = threading.Condition()
-        executor = ThreadPoolExecutor(max_workers=3) #change this later
-        timer_thread = executor.submit(timer_work, condition)
+    def start(self):
+        executor = ThreadPoolExecutor() #Only for handling
+        timer_thread = threading.Thread(target=self.timer_work)
+
+    def stop(self):
+        with self._continue_lock:
+            self._continue = False
+
+    def __enter__(self):
+        self.start()
         return self
 
-    def __exit__:
-        # close all threads
-        # what goes here?
-        pass
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stop()
 
     def push_handler(self, message_name, handler):
         self._stacks[message_name].append(handler)
@@ -45,15 +52,22 @@ class MAVLinkConnection:
             self._stacks.clear()
 
     def add_timer(self, period, handler):
-        heappush(self._timers, Timer(period, handler))
+        with self._timers_cv:
+            heappush(self._timers, Timer(period, handler))
+            self._timers_cv.notify()
 
-    def timer_work(self, cv):
-        with cv:
-            cv.wait_for(self._timers != [])
-            current_timer = heappop(self._timers)
-            current_timer.wait_time()
-            current_timer.handle()
-            heappush(self._timers, current_timer)
+    def timer_work(self):
+        def get_cont_val():
+            with self._continue_lock:
+                return self._continue
+        while get_cont_val():
+            with self._timers_cv:
+                self._timers_cv.wait_for(self._timers != []) #check if heap is empty
+                current_timer = heappop(self._timers)
+            current_timer.handle(self)
+            with self._timers_cv:
+                heappush(self._timers, current_timer)
+                self._timers_cv.notify()
 
 class Timer:
     """Definition of Timer class"""
@@ -70,7 +84,8 @@ class Timer:
         delta_time = (self._next_time - current_time).total_seconds()
         time.sleep(delta_time)
 
-    def handle(self):
+    def handle(self, mavconn_instance):
+        self.wait_time()
         # pass handler to worker thread
         current_time = datetime.datetime.now()
         period_seconds = timedelta(seconds=self._period)
