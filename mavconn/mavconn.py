@@ -60,9 +60,11 @@ class MAVLinkConnection:
         def get_cont_val():
             with self._continue_lock:
                 return self._continue
-        while get_cont_val():
+        def timer_status():
+            return (self._timers != [])
+        if get_cont_val(): # SET TO WHILE
             with self._timers_cv:
-                self._timers_cv.wait_for(self._timers != []) #check if heap is empty
+                self._timers_cv.wait_for(timer_status) #check if heap is empty
                 current_timer = heappop(self._timers)
             current_timer.handle(self)
             with self._timers_cv:
