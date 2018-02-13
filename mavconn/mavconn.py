@@ -9,7 +9,27 @@ import threading
 
 
 class MAVLinkConnection:
-    """Definition of MAVCONN class"""
+    """Manages threads that handle mavlink messages
+    
+    Attributes
+    ----------
+        mav : ()
+            A generic mavlink port
+        _stacks : (dict of str: func)
+            Contains stacks for various mav message types and the associated 
+            handlers for those message types. For example, 
+            {'Heartbeat',[handler1, handler2, handler3']}
+        _timers : (list)
+            A heap queue that stores and compares handlers based on 
+            the time to next call.
+        _timers_cv: ()
+            A condition variable that notifies the timer thread to start 
+            when a timer is added into the _timers heap queue.
+        _continue: (bool)
+            Keeps timer thread active in a loop while True.
+        _continue_lock: ()
+            Lock for _continue to ensure the boolean value can be toggled.
+    """
 
     def __init__(self, mavfile):
         self.mav = mavfile
