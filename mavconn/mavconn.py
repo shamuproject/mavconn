@@ -40,10 +40,12 @@ class MAVLinkConnection:
         self._continue_lock = threading.Lock()
 
     def start(self):
+        """ Initializes the timer, listening, and handler worker threads."""
         executor = ThreadPoolExecutor() #Only for handling
         timer_thread = threading.Thread(target=self.timer_work)
 
     def stop(self):
+        """ Stops the timer, listening, and handler worker threads."""
         with self._continue_lock:
             self._continue = False
 
@@ -55,10 +57,32 @@ class MAVLinkConnection:
         self.stop()
 
     def push_handler(self, message_name, handler):
+        """Pushes mav message and associated handler unto appropriate stack
+
+        Parameters
+        ----------
+        message_name : (str)
+            The type of mav message. For example, 'HEARTBEAT'
+        handler : (func)
+            The function that is to be performed 
+            (associated with a type of mav message)
+        """
         self._stacks[message_name].append(handler)
 
     def pop_handler(self, message_name):
-        """return function(mav,message)"""
+        """Pops the last handler in a stack with a given mav message type
+        
+        Parameters
+        ----------
+        message_name : (str)
+            The type of mav message. For example, 'HEARTBEAT'
+        
+        Returns
+        -------
+        handler : (func)
+            The function that is to be performed
+            (associated with a type of mav message)
+        """
         try:
        	    handler = self._stacks[message_name].pop()
        	    return handler
