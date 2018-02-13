@@ -90,23 +90,41 @@ class MAVLinkConnection:
             raise KeyError('That message name key does not exist!')
 
     def clear_handler(self, message_name=None):
+        """Removes all handlers in the stack assoc. with a given mav message type
+        
+        Parameters
+        ----------
+        message_name : (str)
+            The type of mav message. For example, 'HEARTBEAT'
+        """
         if message_name:
             self._stacks.pop(message_name)
         else:
             self._stacks.clear()
 
     def add_timer(self, period, handler):
+        """Adds a timer object to heap queue with assoc. repeating period and handler
+        
+        Parameters
+        ----------
+        period : (int)
+            The time period in seconds between each time the handler should be called
+        handler : (func)
+            The function that is to be performed at intervals indicated by
+            the timer period)
+        """
         with self._timers_cv:
             heappush(self._timers, Timer(period, handler))
             self._timers_cv.notify()
 
     def timer_work(self):
+        """Target for the timer thread. Processes timers from/to the heap queue"""
         def get_cont_val():
             with self._continue_lock:
                 return self._continue
         def timer_status():
             return (self._timers != [])
-        if get_cont_val(): # SET TO WHILE
+        while get_cont_val():
             with self._timers_cv:
                 self._timers_cv.wait_for(timer_status) #check if heap is empty
                 current_timer = heappop(self._timers)
@@ -116,7 +134,26 @@ class MAVLinkConnection:
                 self._timers_cv.notify()
 
 class Timer:
-    """Definition of Timer class"""
+    """Creates objects with a time period interval, handler, and next calendar
+    time for handler call.
+     
+    Note
+    ----
+    Timer objects are comparable based on their _next_time attribute. 
+    This is useful for popping and pushing onto the heap queue.
+    
+    Attributes
+    ----------
+        _period : (int)
+            Time interval in seconds between when a handler is called and the next
+            time the handler should be called.
+        _handler : (func)
+            The function that is to be performed at intervals indicated by
+            the timer period
+        _next_time : (datetime)
+            A datetime that indicates the next calendar time a handler 
+            should be called.
+    """
 
     def __init__(self, period, handler):
         self._period = period
@@ -126,11 +163,13 @@ class Timer:
         self._next_time = current_time + period_seconds
 
     def wait_time(self):
+        """Delays timer thread until timer object _next_time is now"""
         current_time = datetime.datetime.now()
         delta_time = (self._next_time - current_time).total_seconds()
         time.sleep(delta_time)
 
     def handle(self, mavconn_instance):
+        """Passes handler to worker thread and updates _next_time"""
         self.wait_time()
         # pass handler to worker thread
         current_time = datetime.datetime.now()
