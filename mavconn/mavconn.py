@@ -16,7 +16,7 @@ class MAVLinkConnection:
         mav : ()
             A generic mavlink port
         _stacks : (dict of str: func)
-            Contains stacks for various mav message types and the associated
+            Contains stacks for various MAVLink message types and the associated
             handlers for those message types. For example,
             {'Heartbeat',[handler1, handler2, handler3']}
         _timers : (list)
@@ -60,31 +60,31 @@ class MAVLinkConnection:
         self.stop()
 
     def push_handler(self, message_name, handler):
-        """Pushes mav message and associated handler unto appropriate stack
+        """Pushes MAVLink message and associated handler unto appropriate stack
 
         Parameters
         ----------
         message_name : (str)
-            The type of mav message. For example, 'HEARTBEAT'
+            The type of MAVLink message. For example, 'HEARTBEAT'
         handler : (func)
             The function that is to be performed
-            (associated with a type of mav message)
+            (associated with a type of MAVLink message)
         """
         self._stacks[message_name].append(handler)
 
     def pop_handler(self, message_name):
-        """Pops the last handler in a stack with a given mav message type
+        """Pops the last handler in a stack with a given MAVLink message type
 
         Parameters
         ----------
         message_name : (str)
-            The type of mav message. For example, 'HEARTBEAT'
+            The type of MAVlink message. For example, 'HEARTBEAT'
 
         Returns
         -------
         handler : (func)
             The function that is to be performed
-            (associated with a type of mav message)
+            (associated with a type of MAVLink message)
         """
         try:
             handler = self._stacks[message_name].pop()
@@ -93,12 +93,12 @@ class MAVLinkConnection:
             raise KeyError('That message name key does not exist!')
 
     def clear_handler(self, message_name=None):
-        """Removes all handlers in the stack assoc. with a given mav message type
+        """Removes all handlers in the stack assoc. with a given MAVLink message type
 
         Parameters
         ----------
         message_name : (str)
-            The type of mav message. For example, 'HEARTBEAT'
+            The type of MAVLink message. For example, 'HEARTBEAT'
         """
         if message_name:
             self._stacks.pop(message_name)
@@ -202,5 +202,3 @@ class Timer:
 
     def __ne__(self, other):
         return self._next_time != other._next_time
-
-
