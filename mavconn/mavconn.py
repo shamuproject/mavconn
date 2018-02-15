@@ -33,6 +33,7 @@ class MAVLinkConnection:
 
     def __init__(self, mavfile):
         self.mav = mavfile
+        self.timer_thread = []
         self._stacks = defaultdict(list)
         self._timers = []
         self._timers_cv = threading.Condition()
@@ -41,13 +42,15 @@ class MAVLinkConnection:
 
     def start(self):
         """ Initializes the timer, listening, and handler worker threads."""
-        executor = ThreadPoolExecutor() #Only for handling
-        timer_thread = threading.Thread(target=self.timer_work)
+        #executor = ThreadPoolExecutor() #Only for handling
+        self.timer_thread = threading.Thread(target=self.timer_work)
+        self.timer_thread.start()
 
     def stop(self):
         """ Stops the timer, listening, and handler worker threads."""
         with self._continue_lock:
             self._continue = False
+        self.timer_thread.join()
 
     def __enter__(self):
         self.start()
@@ -166,7 +169,8 @@ class Timer:
         """Delays timer thread until timer object _next_time is now"""
         current_time = datetime.datetime.now()
         delta_time = (self._next_time - current_time).total_seconds()
-        time.sleep(delta_time)
+        if delta_time >= 0:
+            time.sleep(delta_time)
 
     def handle(self, mavconn_instance):
         """Passes handler to worker thread and updates _next_time"""

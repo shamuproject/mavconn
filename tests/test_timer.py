@@ -33,3 +33,8 @@ def test_timer_init():
 def test_add_timer():
     add_test = MAVLinkConnection(mavfile)
     assert add_test._timers == []
+    
+def test_timer_handler():
+    handler_test = MAVLinkConnection(mavfile)
+    timer_test = Timer(period,handler)
+    timer_test.handle(handler_test)
