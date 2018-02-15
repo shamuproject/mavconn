@@ -10,20 +10,20 @@ import threading
 
 class MAVLinkConnection:
     """Manages threads that handle mavlink messages
-    
+
     Attributes
     ----------
         mav : ()
             A generic mavlink port
         _stacks : (dict of str: func)
-            Contains stacks for various mav message types and the associated 
-            handlers for those message types. For example, 
+            Contains stacks for various mav message types and the associated
+            handlers for those message types. For example,
             {'Heartbeat',[handler1, handler2, handler3']}
         _timers : (list)
-            A heap queue that stores and compares handlers based on 
+            A heap queue that stores and compares handlers based on
             the time to next call.
         _timers_cv: ()
-            A condition variable that notifies the timer thread to start 
+            A condition variable that notifies the timer thread to start
             when a timer is added into the _timers heap queue.
         _continue: (bool)
             Keeps timer thread active in a loop while True.
@@ -67,19 +67,19 @@ class MAVLinkConnection:
         message_name : (str)
             The type of mav message. For example, 'HEARTBEAT'
         handler : (func)
-            The function that is to be performed 
+            The function that is to be performed
             (associated with a type of mav message)
         """
         self._stacks[message_name].append(handler)
 
     def pop_handler(self, message_name):
         """Pops the last handler in a stack with a given mav message type
-        
+
         Parameters
         ----------
         message_name : (str)
             The type of mav message. For example, 'HEARTBEAT'
-        
+
         Returns
         -------
         handler : (func)
@@ -87,14 +87,14 @@ class MAVLinkConnection:
             (associated with a type of mav message)
         """
         try:
-       	    handler = self._stacks[message_name].pop()
-       	    return handler
+            handler = self._stacks[message_name].pop()
+            return handler
         except (KeyError, IndexError):
             raise KeyError('That message name key does not exist!')
 
     def clear_handler(self, message_name=None):
         """Removes all handlers in the stack assoc. with a given mav message type
-        
+
         Parameters
         ----------
         message_name : (str)
@@ -107,7 +107,7 @@ class MAVLinkConnection:
 
     def add_timer(self, period, handler):
         """Adds a timer object to heap queue with assoc. repeating period and handler
-        
+
         Parameters
         ----------
         period : (int)
@@ -126,7 +126,7 @@ class MAVLinkConnection:
             with self._continue_lock:
                 return self._continue
         def timer_status():
-            return (self._timers != [])
+            return self._timers != []
         while get_cont_val():
             with self._timers_cv:
                 self._timers_cv.wait_for(timer_status) #check if heap is empty
@@ -139,7 +139,7 @@ class MAVLinkConnection:
 class Timer:
     """Creates objects with a time period interval, handler, and next calendar
     time for handler call.
-     
+
     Note
     ----
     Timer objects are comparable based on their _next_time attribute. 
