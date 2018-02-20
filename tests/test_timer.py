@@ -23,12 +23,12 @@ def test_timer_init():
     assert test_timer._next_time == time
     assert test_timer2 > test_timer
     assert test_timer2 >= test_timer
-    assert (test_timer2 < test_timer) == False
-    assert (test_timer2 <= test_timer) == False
+    assert not (test_timer2 < test_timer)
+    assert not (test_timer2 <= test_timer)
     assert test_timer2 != test_timer
     assert test_timer2 == test_timer2
     assert test_timer == test_timer3
-    assert (test_timer == period) == False
+    assert not (test_timer == period)
 
 def test_add_timer():
     add_test = MAVLinkConnection(mavfile)

@@ -46,10 +46,6 @@ def test_add_timer_work():
         test_case.add_timer(period2, handler2)
         test_case.add_timer(period3, handler3)
         assert threading.active_count() == 2
-        with test_case._timers_cv:
-            assert len(test_case._timers) == 3
-            assert test_case._timers[0] <= test_case._timers[1]
-            assert test_case._timers[1] <= test_case._timers[2]
         test_case.stop()
     assert threading.active_count() == 1
     
