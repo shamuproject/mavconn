@@ -10,7 +10,7 @@ Welcome to MAVConn's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
+   mavconn
 
 Indices and tables
 ==================
