@@ -4,6 +4,7 @@ from mavconn.mavconn import MAVLinkConnection
 from mavconn.mavconn import Timer
 from freezegun import freeze_time
 from heapq import heappush, heappop
+from pytest_mock import mocker
 import datetime
 import threading
 import concurrent.futures
@@ -20,7 +21,7 @@ handler2 = 2.0
 period3 = 0.3
 handler3 = 3
 
-#@freeze_time("2018-02-06 08:58:58")
+@freeze_time("2018-02-06 08:58:58")
 
 def test_initialization():
     test_mav = MAVLinkConnection(mavfile)
@@ -46,7 +47,6 @@ def test_add_timer_work():
         test_case.add_timer(period2, handler2)
         test_case.add_timer(period3, handler3)
         assert threading.active_count() == 2
-        test_case.stop()
     assert threading.active_count() == 1
     
     
