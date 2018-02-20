@@ -4,7 +4,7 @@ import datetime
 from datetime import timedelta
 from heapq import heappush, heappop
 import time
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 import threading
 
 
@@ -33,7 +33,8 @@ class MAVLinkConnection:
 
     def __init__(self, mavfile):
         self.mav = mavfile
-        self.timer_thread = []
+        self.timer_thread = None
+        self.threadpool = None
         self._stacks = defaultdict(list)
         self._timers = []
         self._timers_cv = threading.Condition()
@@ -42,7 +43,7 @@ class MAVLinkConnection:
 
     def start(self):
         """ Initializes the timer, listening, and handler worker threads."""
-        #executor = ThreadPoolExecutor() #Only for handling
+        self.threadpool = ThreadPoolExecutor()
         self.timer_thread = threading.Thread(target=self.timer_work)
         self.timer_thread.start()
 
@@ -51,6 +52,7 @@ class MAVLinkConnection:
         with self._continue_lock:
             self._continue = False
         self.timer_thread.join()
+        self.threadpool.shutdown()
 
     def __enter__(self):
         self.start()
@@ -161,6 +163,7 @@ class Timer:
     def __init__(self, period, handler):
         self._period = period
         self._handler = handler
+        self._futures = []
         current_time = datetime.datetime.now()
         period_seconds = timedelta(seconds=self._period)
         self._next_time = current_time + period_seconds
@@ -175,7 +178,9 @@ class Timer:
     def handle(self, mavconn_instance):
         """Passes handler to worker thread and updates _next_time"""
         self.wait_time()
-        # pass handler to worker thread
+        self._futures = [x for x in self._futures if not x.done()]
+        self._futures.append(mavconn_instance.threadpool.submit(
+            self._handler, mavconn_instance)) 
         current_time = datetime.datetime.now()
         period_seconds = timedelta(seconds=self._period)
         self._next_time = current_time + period_seconds
