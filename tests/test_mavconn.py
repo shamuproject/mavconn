@@ -41,7 +41,6 @@ def test_initialization():
     test_mav.clear_handler()
     assert test_mav._stacks == test_clear
 
-#@freeze_time("2018-02-06 08:58:58", as_arg=True)
 def test_add_timer_work(mocker):
     initial_datetime = datetime.datetime(year=2018, month=2, day=6, hour=8, minute=50, second=3)
     other_datetime = datetime.datetime(year=2018, month=2, day=6, hour=8, minute=50, second=4)
@@ -52,8 +51,8 @@ def test_add_timer_work(mocker):
         test_case = MAVLinkConnection(mavfile)
         assert threading.active_count() == 1
         with test_case as m:
-            test_case.add_timer(period, MockHandler.handler)
             test_case.add_timer(period2, handler2)
+            test_case.add_timer(period, MockHandler.handler)
             test_case.add_timer(period3, handler3)
             assert threading.active_count() == 2
             MockHandler.handler.assert_not_called
