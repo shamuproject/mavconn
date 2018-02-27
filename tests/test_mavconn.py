@@ -14,14 +14,16 @@ mavfile = 1.0
 test_stack = {'HEARTBEAT':['handler1','handler2'],'TELEMETRY':['handler3']}
 test_push = {'HEARTBEAT':['handler1','handler2'],'TELEMETRY':['handler3']}
 test_clear = {}
-period = 0.1
+period = 2
 handler = 1.0
-period2 = 0.2
+period2 = 3
 handler2 = 2.0
-period3 = 0.3
+period3 = 4
 handler3 = 3
 
-@freeze_time("2018-02-06 08:58:58")
+class MockHandler:
+    def handler(self, mavconn_instance):
+        pass
 
 def test_initialization():
     test_mav = MAVLinkConnection(mavfile)
@@ -39,18 +41,29 @@ def test_initialization():
     test_mav.clear_handler()
     assert test_mav._stacks == test_clear
 
-def test_add_timer_work():
-    test_case = MAVLinkConnection(mavfile)
-    assert threading.active_count() == 1
-    with test_case as m:
-        test_case.add_timer(period, handler)
-        test_case.add_timer(period2, handler2)
-        test_case.add_timer(period3, handler3)
-        assert threading.active_count() == 2
-    assert threading.active_count() == 1
+#@freeze_time("2018-02-06 08:58:58", as_arg=True)
+def test_add_timer_work(mocker):
+    initial_datetime = datetime.datetime(year=2018, month=2, day=6, hour=8, minute=50, second=3)
+    other_datetime = datetime.datetime(year=2018, month=2, day=6, hour=8, minute=50, second=4)
+    last_datetime = datetime.datetime(year=2018, month=2, day=6, hour=8, minute=50, second=6)
+    with freeze_time(initial_datetime) as frozen_datetime:
+        mocker.patch.object(MockHandler, 'handler')
+        handler = MockHandler()
+        test_case = MAVLinkConnection(mavfile)
+        assert threading.active_count() == 1
+        with test_case as m:
+            test_case.add_timer(period, MockHandler.handler)
+            test_case.add_timer(period2, handler2)
+            test_case.add_timer(period3, handler3)
+            assert threading.active_count() == 2
+            MockHandler.handler.assert_not_called
+            frozen_datetime.move_to(other_datetime)
+            MockHandler.handler.assert_not_called
+            frozen_datetime.move_to(last_datetime)
+            time.sleep(0.001)
+            MockHandler.handler.assert_called_with(test_case)
+        assert threading.active_count() == 1
 
-def test_handler_thread():
-    pass
     
     
     
