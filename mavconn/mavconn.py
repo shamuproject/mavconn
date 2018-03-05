@@ -37,6 +37,7 @@ class MAVLinkConnection:
         self.threadpool = None
         self._stacks_lock = threading.Lock()
         self._stacks = defaultdict(list)
+        self._futures = []
         self._timers = []
         self._timers_cv = threading.Condition()
         self._continue = True
@@ -45,7 +46,9 @@ class MAVLinkConnection:
     def start(self):
         """ Initializes the timer, listening, and handler worker threads."""
         self.threadpool = ThreadPoolExecutor()
+        self.listening_thread = threading.Thread(target=self.listening_work)
         self.timer_thread = threading.Thread(target=self.timer_work)
+        self.listening_thread.start()
         self.timer_thread.start()
 
     def stop(self):
@@ -149,12 +152,14 @@ class MAVLinkConnection:
                 return self._continue
         while get_cont_val():
             with self._stacks_lock:
-                #set blocking true, timeout=100ms TimeDelta class.
-                mav_message = self.mav.recv_match()
+                mav_message = self.mav.recv_match(block=True, timeout=timedelta(microseconds=100))
                 if mav_message.name in self._stacks and len(self._stacks[mav_message.name]) > 0:
                     handler = pop_handler(mav_message.name)
-                if '*' in self._stacks and len(self._stacks['*']) > 0:
+                elif '*' in self._stacks and len(self._stacks['*']) > 0:
                     handler = pop_handler('*')
+                if handler is not None:
+                    self._futures = [x for x in self._futures if not x.done()]
+                    self._futures.append(self.threadpool.submit(handler, self))
                 
 
 class Timer:
