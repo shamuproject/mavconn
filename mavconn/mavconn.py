@@ -35,6 +35,7 @@ class MAVLinkConnection:
         self.mav = mavfile
         self.timer_thread = None
         self.threadpool = None
+        self._stacks_lock = threading.Lock()
         self._stacks = defaultdict(list)
         self._timers = []
         self._timers_cv = threading.Condition()
@@ -72,7 +73,8 @@ class MAVLinkConnection:
             The function that is to be performed
             (associated with a type of MAVLink message)
         """
-        self._stacks[message_name].append(handler)
+        with self._stacks_lock:
+            self._stacks[message_name].append(handler)
 
     def pop_handler(self, message_name):
         """Pops the last handler in a stack with a given MAVLink message type
@@ -88,11 +90,12 @@ class MAVLinkConnection:
             The function that is to be performed
             (associated with a type of MAVLink message)
         """
-        try:
-            handler = self._stacks[message_name].pop()
-            return handler
-        except (KeyError, IndexError):
-            raise KeyError('That message name key does not exist!')
+        with self._stacks_lock:
+            try:
+                handler = self._stacks[message_name].pop()
+                return handler
+            except (KeyError, IndexError):
+                raise KeyError('That message name key does not exist!')
 
     def clear_handler(self, message_name=None):
         """Removes all handlers in the stack assoc. with a given MAVLink message type
@@ -102,10 +105,11 @@ class MAVLinkConnection:
         message_name : (str)
             The type of MAVLink message. For example, 'HEARTBEAT'
         """
-        if message_name:
-            self._stacks.pop(message_name)
-        else:
-            self._stacks.clear()
+        with self._stacks_lock:
+            if message_name:
+                self._stacks.pop(message_name)
+            else:
+                self._stacks.clear()
 
     def add_timer(self, period, handler):
         """Adds a timer object to heap queue with assoc. repeating period and handler
@@ -137,6 +141,21 @@ class MAVLinkConnection:
             with self._timers_cv:
                 heappush(self._timers, current_timer)
                 self._timers_cv.notify()
+
+    def listening_work(self):
+        """Target for the listening thread."""
+        def get_cont_val():
+            with self._continue_lock:
+                return self._continue
+        while get_cont_val():
+            with self._stacks_lock:
+                #set blocking true, timeout=100ms TimeDelta class.
+                mav_message = self.mav.recv_match()
+                if mav_message.name in self._stacks and len(self._stacks[mav_message.name]) > 0:
+                    handler = pop_handler(mav_message.name)
+                if '*' in self._stacks and len(self._stacks['*']) > 0:
+                    handler = pop_handler('*')
+                
 
 class Timer:
     """Creates objects with a time period interval, handler, and next calendar
