@@ -56,6 +56,7 @@ class MAVLinkConnection:
         with self._continue_lock:
             self._continue = False
         self.timer_thread.join()
+        self.listening_thread.join()
         self.threadpool.shutdown()
 
     def __enter__(self):
