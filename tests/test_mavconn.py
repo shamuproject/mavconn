@@ -54,12 +54,12 @@ def test_add_timer_work(mocker):
             test_case.add_timer(period2, handler2)
             test_case.add_timer(period, MockHandler.handler)
             test_case.add_timer(period3, handler3)
-            assert threading.active_count() == 2
+            assert threading.active_count() == 3
             MockHandler.handler.assert_not_called
             frozen_datetime.move_to(other_datetime)
             MockHandler.handler.assert_not_called
             frozen_datetime.move_to(last_datetime)
-            time.sleep(0.001)
+            time.sleep(1)
             MockHandler.handler.assert_called_with(test_case)
         assert threading.active_count() == 1
 
