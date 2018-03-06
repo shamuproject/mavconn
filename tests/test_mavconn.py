@@ -25,6 +25,14 @@ class MockHandler:
     def handler(self, mavconn_instance):
         pass
 
+class MockMav:
+    def recv_match(self, *args, **kwargs):
+        pass
+
+class MockMessage:
+    def __init__(self, name):
+        self.name = name
+
 def test_initialization():
     test_mav = MAVLinkConnection(mavfile)
     assert test_mav.mav == 1.0
@@ -48,9 +56,14 @@ def test_add_timer_work(mocker):
     with freeze_time(initial_datetime) as frozen_datetime:
         mocker.patch.object(MockHandler, 'handler')
         handler = MockHandler()
-        test_case = MAVLinkConnection(mavfile)
+        mocker.patch.object(MockMav, 'recv_match')
+        mockmessage = MockMessage('HEARTBEAT')
+        mockmav = MockMav()
+        mockmav.recv_match.return_value = mockmessage
+        test_case = MAVLinkConnection(mockmav)
         assert threading.active_count() == 1
         with test_case as m:
+            test_case.push_handler('HEARTBEAT', handler2)
             test_case.add_timer(period2, handler2)
             test_case.add_timer(period, MockHandler.handler)
             test_case.add_timer(period3, handler3)
@@ -59,8 +72,11 @@ def test_add_timer_work(mocker):
             frozen_datetime.move_to(other_datetime)
             MockHandler.handler.assert_not_called
             frozen_datetime.move_to(last_datetime)
-            time.sleep(1)
+            time.sleep(0.5)
             MockHandler.handler.assert_called_with(test_case)
+            test_case.pop_handler('HEARTBEAT')
+            test_case.push_handler('*', handler2)
+            time.sleep(0.5)
         assert threading.active_count() == 1
 
     
