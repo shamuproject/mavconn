@@ -153,15 +153,18 @@ class MAVLinkConnection:
                 return self._continue
         while get_cont_val():
             with self._stacks_lock:
-                continue
-                #mav_message = self.mav.recv_match(block=True, timeout=timedelta(microseconds=100))
-                #if mav_message.name in self._stacks and len(self._stacks[mav_message.name]) > 0:
-                    #handler = pop_handler(mav_message.name)
-                #elif '*' in self._stacks and len(self._stacks['*']) > 0:
-                    #handler = pop_handler('*')
-                #if handler is not None:
-                    #self._futures = [x for x in self._futures if not x.done()]
-                    #self._futures.append(self.threadpool.submit(handler, self))
+                mav_message = self.mav.recv_match(block=True, timeout=timedelta(milliseconds=100))
+                try:
+                    handler = self._stacks[mav_message.name][-1]
+                    self._futures = [x for x in self._futures if not x.done()]
+                    self._futures.append(self.threadpool.submit(handler, self, mav_message))
+                except:
+                    try:
+                        handler = self._stacks['*'][-1]
+                        self._futures = [x for x in self._futures if not x.done()]
+                        self._futures.append(self.threadpool.submit(handler, self, mav_message))
+                    except (KeyError, IndexError):
+                        pass 
                 
 
 class Timer:
