@@ -164,8 +164,25 @@ class MAVLinkConnection:
                         self._futures = [x for x in self._futures if not x.done()]
                         self._futures.append(self.threadpool.submit(handler, self, mav_message))
                     except (KeyError, IndexError):
-                        pass 
-                
+                        pass
+
+
+class MAVFileWrapper(object):
+
+    def __init__(self, mavfile):
+        self._mavfile = mavfile
+        self._lock = threading.Lock()
+
+    def __getattr__(self, name):
+        def wrapper(*args, **kwargs):
+            with self._lock:
+                return getattr(self._mavfile, name)(*args, **kwargs)
+        return wrapper
+
+    def recv_match(
+        self, condition=None, type=None, blocking=False, timeout=None):
+        return self._mavfile.recv_match(condition, type, blocking, timeout)
+
 
 class Timer:
     """Creates objects with a time period interval, handler, and next calendar
@@ -173,9 +190,9 @@ class Timer:
 
     Note
     ----
-    Timer objects are comparable based on their _next_time attribute. 
+    Timer objects are comparable based on their _next_time attribute.
     This is useful for popping and pushing onto the heap queue.
-    
+
     Attributes
     ----------
         _period : (int)
@@ -185,7 +202,7 @@ class Timer:
             The function that is to be performed at intervals indicated by
             the timer period
         _next_time : (datetime)
-            A datetime that indicates the next calendar time a handler 
+            A datetime that indicates the next calendar time a handler
             should be called.
     """
 
@@ -209,7 +226,7 @@ class Timer:
         self.wait_time()
         self._futures = [x for x in self._futures if not x.done()]
         self._futures.append(mavconn_instance.threadpool.submit(
-            self._handler, mavconn_instance)) 
+            self._handler, mavconn_instance))
         current_time = datetime.datetime.now()
         period_seconds = timedelta(seconds=self._period)
         self._next_time = current_time + period_seconds
