@@ -4,7 +4,7 @@ import datetime
 from datetime import timedelta
 from heapq import heappush, heappop
 import time
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 import threading
 
 
@@ -33,8 +33,11 @@ class MAVLinkConnection:
 
     def __init__(self, mavfile):
         self.mav = mavfile
-        self.timer_thread = []
+        self.timer_thread = None
+        self.threadpool = None
+        self._stacks_lock = threading.Lock()
         self._stacks = defaultdict(list)
+        self._futures = []
         self._timers = []
         self._timers_cv = threading.Condition()
         self._continue = True
@@ -42,8 +45,10 @@ class MAVLinkConnection:
 
     def start(self):
         """ Initializes the timer, listening, and handler worker threads."""
-        #executor = ThreadPoolExecutor() #Only for handling
+        self.threadpool = ThreadPoolExecutor()
+        self.listening_thread = threading.Thread(target=self.listening_work)
         self.timer_thread = threading.Thread(target=self.timer_work)
+        self.listening_thread.start()
         self.timer_thread.start()
 
     def stop(self):
@@ -51,6 +56,8 @@ class MAVLinkConnection:
         with self._continue_lock:
             self._continue = False
         self.timer_thread.join()
+        self.listening_thread.join()
+        self.threadpool.shutdown()
 
     def __enter__(self):
         self.start()
@@ -70,7 +77,8 @@ class MAVLinkConnection:
             The function that is to be performed
             (associated with a type of MAVLink message)
         """
-        self._stacks[message_name].append(handler)
+        with self._stacks_lock:
+            self._stacks[message_name].append(handler)
 
     def pop_handler(self, message_name):
         """Pops the last handler in a stack with a given MAVLink message type
@@ -86,11 +94,12 @@ class MAVLinkConnection:
             The function that is to be performed
             (associated with a type of MAVLink message)
         """
-        try:
-            handler = self._stacks[message_name].pop()
-            return handler
-        except (KeyError, IndexError):
-            raise KeyError('That message name key does not exist!')
+        with self._stacks_lock:
+            try:
+                handler = self._stacks[message_name].pop()
+                return handler
+            except (KeyError, IndexError):
+                raise KeyError('That message name key does not exist!')
 
     def clear_handler(self, message_name=None):
         """Removes all handlers in the stack assoc. with a given MAVLink message type
@@ -100,10 +109,11 @@ class MAVLinkConnection:
         message_name : (str)
             The type of MAVLink message. For example, 'HEARTBEAT'
         """
-        if message_name:
-            self._stacks.pop(message_name)
-        else:
-            self._stacks.clear()
+        with self._stacks_lock:
+            if message_name:
+                self._stacks.pop(message_name)
+            else:
+                self._stacks.clear()
 
     def add_timer(self, period, handler):
         """Adds a timer object to heap queue with assoc. repeating period and handler
@@ -136,6 +146,27 @@ class MAVLinkConnection:
                 heappush(self._timers, current_timer)
                 self._timers_cv.notify()
 
+    def listening_work(self):
+        """Target for the listening thread."""
+        def get_cont_val():
+            with self._continue_lock:
+                return self._continue
+        while get_cont_val():
+            with self._stacks_lock:
+                mav_message = self.mav.recv_match(block=True, timeout=timedelta(milliseconds=100))
+                try:
+                    handler = self._stacks[mav_message.name][-1]
+                    self._futures = [x for x in self._futures if not x.done()]
+                    self._futures.append(self.threadpool.submit(handler, self, mav_message))
+                except:
+                    try:
+                        handler = self._stacks['*'][-1]
+                        self._futures = [x for x in self._futures if not x.done()]
+                        self._futures.append(self.threadpool.submit(handler, self, mav_message))
+                    except (KeyError, IndexError):
+                        pass 
+                
+
 class Timer:
     """Creates objects with a time period interval, handler, and next calendar
     time for handler call.
@@ -161,6 +192,7 @@ class Timer:
     def __init__(self, period, handler):
         self._period = period
         self._handler = handler
+        self._futures = []
         current_time = datetime.datetime.now()
         period_seconds = timedelta(seconds=self._period)
         self._next_time = current_time + period_seconds
@@ -175,7 +207,9 @@ class Timer:
     def handle(self, mavconn_instance):
         """Passes handler to worker thread and updates _next_time"""
         self.wait_time()
-        # pass handler to worker thread
+        self._futures = [x for x in self._futures if not x.done()]
+        self._futures.append(mavconn_instance.threadpool.submit(
+            self._handler, mavconn_instance)) 
         current_time = datetime.datetime.now()
         period_seconds = timedelta(seconds=self._period)
         self._next_time = current_time + period_seconds
