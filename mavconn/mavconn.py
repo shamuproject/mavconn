@@ -153,7 +153,7 @@ class MAVLinkConnection:
                 return self._continue
         while get_cont_val():
             with self._stacks_lock:
-                mav_message = self.mav.recv_match(block=True, timeout=timedelta(milliseconds=100))
+                mav_message = self.mav.recv_match(blocking=True, timeout=timedelta(milliseconds=100))
                 try:
                     handler = self._stacks[mav_message.name][-1]
                     self._futures = [x for x in self._futures if not x.done()]
