@@ -26,7 +26,13 @@ class MockHandler:
         pass
 
     def handler2(self, mav_message):
-        pass 
+        pass
+
+    def handler3(self, mav_message):
+        pass
+
+    def handler4(self, mav_message):
+        pass
 
 class MockMav:
     def recv_match(self, *args, **kwargs):
@@ -59,6 +65,8 @@ def test_add_timer_work(mocker):
     with freeze_time(initial_datetime) as frozen_datetime:
         mocker.patch.object(MockHandler, 'handler')
         mocker.patch.object(MockHandler, 'handler2')
+        mocker.patch.object(MockHandler, 'handler3')
+        mocker.patch.object(MockHandler, 'handler4')
         handler = MockHandler()
         mocker.patch.object(MockMav, 'recv_match')
         mockmessage = MockMessage('HEARTBEAT')
@@ -69,7 +77,10 @@ def test_add_timer_work(mocker):
         with test_case as m:
             assert threading.active_count() == 3
             MockHandler.handler2.assert_not_called
+            MockHandler.handler3.assert_not_called
             test_case.push_handler('HEARTBEAT', MockHandler.handler2)
+            test_case.push_handler('*', MockHandler.handler3)
+            test_case.push_handler('TELEMETRY', MockHandler.handler4)
             time.sleep(0.2)
             MockHandler.handler2.assert_called_with(test_case, mockmessage)
             test_case.add_timer(period2, handler2)
@@ -81,9 +92,11 @@ def test_add_timer_work(mocker):
             frozen_datetime.move_to(last_datetime)
             time.sleep(0.5)
             MockHandler.handler.assert_called_with(test_case)
+            MockHandler.handler3.assert_not_called
             test_case.pop_handler('HEARTBEAT')
-            test_case.push_handler('*', handler2)
             time.sleep(0.5)
+            MockHandler.handler3.assert_called_with(test_case, mockmessage)
+            MockHandler.handler4.assert_not_called
         assert threading.active_count() == 1
 
     
