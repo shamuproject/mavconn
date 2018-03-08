@@ -44,7 +44,7 @@ class MockMessage:
 
 def test_initialization():
     test_mav = MAVLinkConnection(mavfile)
-    assert test_mav.mav == 1.0
+    assert test_mav._mavfile == 1.0
     assert test_mav._stacks == {}
     test_mav.push_handler('HEARTBEAT','handler1')
     test_mav.push_handler('HEARTBEAT','handler2')

@@ -13,7 +13,7 @@ class MAVLinkConnection:
 
     Attributes
     ----------
-        mav : ()
+        _mavfile : ()
             A generic mavlink port
         _stacks : (dict of str: func)
             Contains stacks for various MAVLink message types and the associated
@@ -32,9 +32,11 @@ class MAVLinkConnection:
     """
 
     def __init__(self, mavfile):
-        self.mav = mavfile
-        self.timer_thread = None
-        self.threadpool = None
+        self._mavfile = mavfile
+        self._mav_lock = threading.Lock()
+        self._timer_thread = None
+        self._listening_thread = None
+        self._threadpool = None
         self._stacks_lock = threading.Lock()
         self._stacks = defaultdict(list)
         self._futures = []
@@ -45,19 +47,19 @@ class MAVLinkConnection:
 
     def start(self):
         """ Initializes the timer, listening, and handler worker threads."""
-        self.threadpool = ThreadPoolExecutor()
-        self.listening_thread = threading.Thread(target=self.listening_work)
-        self.timer_thread = threading.Thread(target=self.timer_work)
-        self.listening_thread.start()
-        self.timer_thread.start()
+        self._threadpool = ThreadPoolExecutor()
+        self._listening_thread = threading.Thread(target=self.listening_work)
+        self._timer_thread = threading.Thread(target=self.timer_work)
+        self._listening_thread.start()
+        self._timer_thread.start()
 
     def stop(self):
         """ Stops the timer, listening, and handler worker threads."""
         with self._continue_lock:
             self._continue = False
-        self.timer_thread.join()
-        self.listening_thread.join()
-        self.threadpool.shutdown()
+        self._timer_thread.join()
+        self._listening_thread.join()
+        self._threadpool.shutdown()
 
     def __enter__(self):
         self.start()
@@ -153,35 +155,24 @@ class MAVLinkConnection:
                 return self._continue
         while get_cont_val():
             with self._stacks_lock:
-                mav_message = self.mav.recv_match(blocking=True, timeout=timedelta(milliseconds=100))
+                mav_message = self._mavfile.recv_match(blocking=True, timeout=timedelta(milliseconds=100))
                 try:
                     handler = self._stacks[mav_message.name][-1]
                     self._futures = [x for x in self._futures if not x.done()]
-                    self._futures.append(self.threadpool.submit(handler, self, mav_message))
+                    self._futures.append(self._threadpool.submit(handler, self, mav_message))
                 except:
                     try:
                         handler = self._stacks['*'][-1]
                         self._futures = [x for x in self._futures if not x.done()]
-                        self._futures.append(self.threadpool.submit(handler, self, mav_message))
+                        self._futures.append(self._threadpool.submit(handler, self, mav_message))
                     except (KeyError, IndexError):
                         pass
 
-
-class MAVFileWrapper(object):
-
-    def __init__(self, mavfile):
-        self._mavfile = mavfile
-        self._lock = threading.Lock()
-
     def __getattr__(self, name):
         def wrapper(*args, **kwargs):
-            with self._lock:
-                return getattr(self._mavfile, name)(*args, **kwargs)
+            with self._mav_lock:
+                return getattr(self._mavfile.mav, name)(*args, **kwargs)
         return wrapper
-
-    def recv_match(
-        self, condition=None, type=None, blocking=False, timeout=None):
-        return self._mavfile.recv_match(condition, type, blocking, timeout)
 
 
 class Timer:
@@ -225,7 +216,7 @@ class Timer:
         """Passes handler to worker thread and updates _next_time"""
         self.wait_time()
         self._futures = [x for x in self._futures if not x.done()]
-        self._futures.append(mavconn_instance.threadpool.submit(
+        self._futures.append(mavconn_instance._threadpool.submit(
             self._handler, mavconn_instance))
         current_time = datetime.datetime.now()
         period_seconds = timedelta(seconds=self._period)
