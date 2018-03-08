@@ -99,6 +99,8 @@ def test_add_timer_work(mocker):
             MockHandler.handler4.assert_not_called
         assert threading.active_count() == 1
 
+#def test_wrapper():
+#    test_case = MAVLinkConnection()
     
     
     
