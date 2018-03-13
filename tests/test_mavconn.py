@@ -42,12 +42,16 @@ class MockMessage:
     def __init__(self, name):
         self.name = name
 
-class MockMavWrapper:
+class Mav:
     def ping_send(self):
         pass
 
     def heartbeat_send(self):
-        time.sleep(20)
+        time.sleep(20)    
+
+class MockMavWrapper:
+    def __init__(self, mav):
+        self.mav = mav
 
 def test_initialization():
     test_mav = MAVLinkConnection(mavfile)
@@ -111,9 +115,12 @@ def test_wrapper(mocker):
     other_datetime = datetime.datetime(year=2018, month=2, day=6, hour=8, minute=50, second=4)
     last_datetime = datetime.datetime(year=2018, month=2, day=6, hour=8, minute=50, second=6)
     with freeze_time(initial_datetime) as frozen_datetime:
-        mocker.patch.object(MockMavWrapper, 'ping_send')
-        mocker.patch.object(MockMavWrapper, 'heartbeat_send')
-        mock_mav = MockMavWrapper()
+        mocker.patch.object(Mav, 'ping_send')
+        mocker.patch.object(Mav, 'heartbeat_send')
+        mav = Mav()
+        mock_mav = MockMavWrapper(mav)
         test_case = MAVLinkConnection(mock_mav)
-        
+        mav.ping_send.assert_not_called()
+        test_case.ping_send()
+        mav.ping_send.assert_called_with()
     
