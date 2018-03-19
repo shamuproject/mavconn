@@ -111,14 +111,13 @@ def test_add_timer_work(mocker):
         assert threading.active_count() == 1
 
 def test_wrapper(mocker):
-    futures = []
     #mocker.patch.object(Mav, 'ping_send')
     #mocker.patch.object(Mav, 'heartbeat_send')
     mav = Mav()
     with mocker.patch.object(mav, 'ping_send', wraps=mav.ping_send) as ps:
         with mocker.patch.object(mav, 'heartbeat_send', wraps=mav.heartbeat_send) as hbs:
         
-    #mav = Mav()
+            futures = []
             mock_mav = MockMavWrapper(mav)
             test_case = MAVLinkConnection(mock_mav)
             mav.ping_send.assert_not_called()
