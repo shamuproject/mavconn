@@ -7,7 +7,7 @@ from heapq import heappush, heappop
 from pytest_mock import mocker
 import datetime
 import threading
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 import time
 
 mavfile = 1.0
@@ -47,7 +47,7 @@ class Mav:
         pass
 
     def heartbeat_send(self):
-        time.sleep(20)    
+        time.sleep(5)
 
 class MockMavWrapper:
     def __init__(self, mav):
@@ -111,26 +111,22 @@ def test_add_timer_work(mocker):
         assert threading.active_count() == 1
 
 def test_wrapper(mocker):
-    initial_datetime = datetime.datetime(year=2018, month=2, day=6, hour=8, minute=50, second=3)
-    other_datetime = datetime.datetime(year=2018, month=2, day=6, hour=8, minute=50, second=4)
-    last_datetime = datetime.datetime(year=2018, month=2, day=6, hour=8, minute=50, second=6)
-    with freeze_time(initial_datetime) as frozen_datetime:
-        mocker.patch.object(Mav, 'ping_send')
-        mocker.patch.object(Mav, 'heartbeat_send')
-        mav = Mav()
-        mock_mav = MockMavWrapper(mav)
-        test_case = MAVLinkConnection(mock_mav)
-        mav.ping_send.assert_not_called()
-        thread_sleep = threading.Thread(target=test_case.heartbeat_send)
-        thread_ping = threading.Thread(target=test_case.ping_send)        
-        thread_sleep.start()
-        thread_ping.start()
-        mav.ping_send.assert_called_with()
-        time.sleep(15)
-        assert threading.active_count() == 3
-        time.sleep(6)
-        assert threading.active_count() == 2
-        #test_case.ping_send()
-        thread_sleep.join()
-        thread_ping.join()
+    futures = []
+    mocker.patch.object(Mav, 'ping_send')
+    mocker.patch.object(Mav, 'heartbeat_send')
+    mav = Mav()
+    mock_mav = MockMavWrapper(mav)
+    test_case = MAVLinkConnection(mock_mav)
+    mav.ping_send.assert_not_called()
+    threadpool = ThreadPoolExecutor()
+    futures.append(threadpool.submit(test_case.heartbeat_send))
+    futures.append(threadpool.submit(test_case.ping_send))
+    assert futures[0].done() is not True
+    mav.ping_send.assert_called_with()
+    time.sleep(3)
+    assert futures[1].done() is not True
+    time.sleep(3)
+    assert futures[0].done() is True
+    assert futures[1].done() is True
+    threadpool.shutdown()
     
