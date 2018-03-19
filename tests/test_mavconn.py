@@ -121,6 +121,16 @@ def test_wrapper(mocker):
         mock_mav = MockMavWrapper(mav)
         test_case = MAVLinkConnection(mock_mav)
         mav.ping_send.assert_not_called()
-        test_case.ping_send()
+        thread_sleep = threading.Thread(target=test_case.heartbeat_send)
+        thread_ping = threading.Thread(target=test_case.ping_send)        
+        thread_sleep.start()
+        thread_ping.start()
         mav.ping_send.assert_called_with()
+        time.sleep(15)
+        assert threading.active_count() == 3
+        time.sleep(6)
+        assert threading.active_count() == 2
+        #test_case.ping_send()
+        thread_sleep.join()
+        thread_ping.join()
     
