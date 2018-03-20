@@ -151,7 +151,7 @@ class MAVLinkConnection:
     def timer_work(self):
         """Target for the timer thread. Processes timers from/to the heap queue"""
         def get_cont_val():
-            """Returns boolean which controls if 
+            """Returns boolean which controls if
                 thread should keep running"""
             with self._continue_lock:
                 return self._continue
@@ -170,7 +170,7 @@ class MAVLinkConnection:
     def listening_work(self):
         """Target for the listening thread."""
         def get_cont_val():
-            """Returns boolean which controls if 
+            """Returns boolean which controls if
                 thread should keep running"""
             with self._continue_lock:
                 return self._continue
