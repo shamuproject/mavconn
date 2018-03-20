@@ -1,11 +1,13 @@
-from pymavlink.mavutil import mavudp
-from collections import defaultdict
+import time
+import threading
 import datetime
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from heapq import heappush, heappop
-import time
-from concurrent.futures import ThreadPoolExecutor
-import threading
+
+
+from pymavlink.mavutil import mavudp
 
 
 class MAVLinkConnection:
@@ -15,10 +17,24 @@ class MAVLinkConnection:
     ----------
         _mavfile : ()
             A generic mavlink port
+        _mav_lock : ()
+            Threading lock for mavfile
+        _timer_thread : ()
+            Thread that manages timers associated with periodic handlers
+        _listening_thread : ()
+            Thread that listens for mav messages and passes handlers to threadpool
+        _threadpool : ()
+            Pool of worker threads that execute handlers passed from timer/listening
+            threads
+        _stacks_lock: ()
+            Threading lock for _stacks
         _stacks : (dict of str: func)
             Contains stacks for various MAVLink message types and the associated
             handlers for those message types. For example,
             {'Heartbeat',[handler1, handler2, handler3']}
+        _futures : (list)
+            Contains futures from jobs submitted to threadpool to keep track of
+            unfinished jobs
         _timers : (list)
             A heap queue that stores and compares handlers based on
             the time to next call.
@@ -169,6 +185,7 @@ class MAVLinkConnection:
                         pass
 
     def __getattr__(self, name):
+        '''Wrapper provides exclusionary access to mavfile; threadsafe''' 
         def wrapper(*args, **kwargs):
             with self._mav_lock:
                 return getattr(self._mavfile.mav, name)(*args, **kwargs)
