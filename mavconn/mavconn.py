@@ -1,13 +1,13 @@
+"""Library provides a threadsafe, callback-based interface
+     to the Python MAVLink library"""
+
 import time
 import threading
 import datetime
+from datetime import timedelta
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-from datetime import timedelta
 from heapq import heappush, heappop
-
-
-from pymavlink.mavutil import mavudp
 
 
 class MAVLinkConnection:
@@ -151,9 +151,12 @@ class MAVLinkConnection:
     def timer_work(self):
         """Target for the timer thread. Processes timers from/to the heap queue"""
         def get_cont_val():
+            """Returns boolean which controls if 
+                thread should keep running"""
             with self._continue_lock:
                 return self._continue
         def timer_status():
+            """Returns boolean and checks if heap is not empty"""
             return self._timers != []
         while get_cont_val():
             with self._timers_cv:
@@ -167,25 +170,30 @@ class MAVLinkConnection:
     def listening_work(self):
         """Target for the listening thread."""
         def get_cont_val():
+            """Returns boolean which controls if 
+                thread should keep running"""
             with self._continue_lock:
                 return self._continue
         while get_cont_val():
             with self._stacks_lock:
-                mav_message = self._mavfile.recv_match(blocking=True, timeout=timedelta(milliseconds=100))
+                mav_message = self._mavfile.recv_match(
+                    blocking=True, timeout=timedelta(milliseconds=100))
                 try:
                     handler = self._stacks[mav_message.name][-1]
                     self._futures = [x for x in self._futures if not x.done()]
-                    self._futures.append(self._threadpool.submit(handler, self, mav_message))
+                    self._futures.append(self._threadpool.submit(
+                        handler, self, mav_message))
                 except:
                     try:
                         handler = self._stacks['*'][-1]
                         self._futures = [x for x in self._futures if not x.done()]
-                        self._futures.append(self._threadpool.submit(handler, self, mav_message))
+                        self._futures.append(self._threadpool.submit(
+                            handler, self, mav_message))
                     except (KeyError, IndexError):
                         pass
 
     def __getattr__(self, name):
-        '''Wrapper provides exclusionary access to mavfile; threadsafe''' 
+        '''Wrapper provides exclusionary access to mavfile; threadsafe'''
         def wrapper(*args, **kwargs):
             with self._mav_lock:
                 return getattr(self._mavfile.mav, name)(*args, **kwargs)
