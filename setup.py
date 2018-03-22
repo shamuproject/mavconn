@@ -38,7 +38,7 @@ setup(
     author=AUTHOR,
     # author_email=EMAIL,
     url=URL,
-    py_modules=['mavconn'],
+    packages=['mavconn'],
     install_requires=REQUIRED,
     include_package_data=True,
     license='GPLv3',
